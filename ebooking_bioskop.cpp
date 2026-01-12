@@ -133,7 +133,7 @@ struct Stack {
 } histori;
 
 /* ======================================================
-   BIOSKOP ? Mengelola keseluruhan sistem
+   BIOSKOP ? Mengelola keseluruhan sistem/array
    ====================================================== */
 struct Bioskop {
     Film daftarFilm[3];
