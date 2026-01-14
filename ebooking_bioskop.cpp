@@ -1,12 +1,26 @@
 #include <iostream>
 #include <string>
-#include <sstream>
-#include <cstdlib>
 using namespace std;
 
-/* ======================================================
-   TREE ? Mengatur kursi per studio
-   ====================================================== */
+/* ============================================================
+   Fungsi bantu: int ? string (karena tanpa to_string)
+   ============================================================ */
+string intToString(int n) {
+    string hasil = "";
+    bool neg = false;
+    if (n == 0) return "0";
+    if (n < 0) { neg = true; n = -n; }
+    while (n > 0) {
+        hasil = char((n % 10) + '0') + hasil;
+        n /= 10;
+    }
+    if (neg) hasil = "-" + hasil;
+    return hasil;
+}
+
+/* ============================================================
+   TREE – Struktur kursi tiap studio
+   ============================================================ */
 struct Kursi {
     int nomor;
     bool terisi;
@@ -14,9 +28,13 @@ struct Kursi {
     Kursi* right;
 };
 
-struct Kursi* tambahKursi(Kursi* root, int nomor) {
-    if (!root) {
-        root = new Kursi{nomor, false, NULL, NULL};
+Kursi* tambahKursi(Kursi* root, int nomor) {
+    if (root == NULL) {
+        root = new Kursi;
+        root->nomor = nomor;
+        root->terisi = false;
+        root->left = NULL;
+        root->right = NULL;
     } else if (nomor < root->nomor)
         root->left = tambahKursi(root->left, nomor);
     else if (nomor > root->nomor)
@@ -24,33 +42,31 @@ struct Kursi* tambahKursi(Kursi* root, int nomor) {
     return root;
 }
 
-struct Kursi* cariKursi(Kursi* root, int nomor) {
-    if (!root || root->nomor == nomor) return root;
+Kursi* cariKursi(Kursi* root, int nomor) {
+    if (root == NULL || root->nomor == nomor) return root;
     if (nomor < root->nomor) return cariKursi(root->left, nomor);
     return cariKursi(root->right, nomor);
 }
 
-void tampilKursi(Kursi* root) {
-    if (!root) return;
-    tampilKursi(root->left);
-    cout << "Kursi " << root->nomor << (root->terisi ? " (Terisi)" : " (Kosong)") << endl;
-    tampilKursi(root->right);
+void tampilKursi(Kursi* root, int idMapping[]) {
+    if (root == NULL) return;
+    tampilKursi(root->left, idMapping);
+    if (idMapping[root->nomor - 1] == -1)
+        cout << "Kursi " << root->nomor << " (Kosong)\n";
+    else
+        cout << "Kursi " << root->nomor << " (Terisi oleh ID "
+             << idMapping[root->nomor - 1] << ")\n";
+    tampilKursi(root->right, idMapping);
 }
 
-void kosongkanKursi(Kursi* root) {
-    if (!root) return;
-    kosongkanKursi(root->left);
-    root->terisi = false;
-    kosongkanKursi(root->right);
-}
-
-/* ======================================================
-   ARRAY ? Menyimpan data film & studio
-   ====================================================== */
+/* ============================================================
+   ARRAY – Film & Studio
+   ============================================================ */
 struct Studio {
     string namaStudio;
     string jadwal;
     Kursi* kursiRoot;
+    int idPemesanKursi[20];
 };
 
 struct Film {
@@ -59,116 +75,159 @@ struct Film {
     Studio* daftarStudio;
 };
 
-/* ======================================================
-   LINKED LIST ? Data User
-   ====================================================== */
+/* ============================================================
+   LINKED LIST – Data user
+   ============================================================ */
 struct User {
+    int id;
     string nama;
     string film;
     string studio;
     string jadwal;
-    int kursi;
+    int jumlahTiket;
+    int kursi[10];
+    string status;
     User* next;
 };
 User* headUser = NULL;
 
-void tambahUser(string nama) {
-    User* baru = new User{nama, "", "", "", -1, NULL};
-    if (!headUser)
-        headUser = baru;
+void tambahUser(string nama, int id) {
+    User* baru = new User;
+    baru->id = id;
+    baru->nama = nama;
+    baru->film = "";
+    baru->studio = "";
+    baru->jadwal = "";
+    baru->jumlahTiket = 0;
+    baru->status = "Menunggu";
+    baru->next = NULL;
+
+    if (headUser == NULL) headUser = baru;
     else {
         User* temp = headUser;
-        while (temp->next) temp = temp->next;
+        while (temp->next != NULL) temp = temp->next;
         temp->next = baru;
     }
 }
 
-User* cariUser(string nama) {
-    for (User* u = headUser; u; u = u->next)
-        if (u->nama == nama) return u;
+User* cariUserByID(int id) {
+    User* u = headUser;
+    while (u != NULL) {
+        if (u->id == id) return u;
+        u = u->next;
+    }
     return NULL;
 }
 
-/* ======================================================
-   QUEUE ? Antrean pengguna
-   ====================================================== */
+/* ============================================================
+   QUEUE – Antrean berbasis ID
+   ============================================================ */
 struct Queue {
-    string data[100];
-    int front = 0, rear = -1, count = 0;
+    int data[100];
+    int front, rear, count;
+    Queue() { front = 0; rear = -1; count = 0; }
 
-    void enqueue(string nama) {
-        data[++rear] = nama;
-        count++;
+    void enqueue(int id) {
+        if (count == 100) { cout << "Antrean penuh!\n"; return; }
+        rear++; data[rear] = id; count++;
     }
 
-    string dequeue() {
-        if (count == 0) return "Kosong";
-        string n = data[front++];
-        count--;
-        return n;
+    int dequeue() {
+        if (count == 0) return -1;
+        int n = data[front]; front++; count--; return n;
     }
 
     bool kosong() { return count == 0; }
 
     void tampil() {
-        cout << "Antrean: ";
+        cout << "Antrean ID: ";
         if (count == 0) cout << "(Kosong)";
-        for (int i = front; i <= rear; i++) cout << "[" << data[i] << "] ";
+        for (int i = front; i <= rear; i++)
+            cout << "[" << data[i] << "] ";
         cout << endl;
     }
 } antrean;
 
-/* ======================================================
-   STACK ? Menyimpan riwayat pemesanan
-   ====================================================== */
+/* ============================================================
+   STACK – Riwayat transaksi (dengan fitur Undo)
+   ============================================================ */
+   struct Bioskop; // Forward declaration agar dikenal di sini
+
 struct Stack {
     string data[200];
-    int top = -1;
-    void push(string s) { data[++top] = s; }
-    bool kosong() { return top == -1; }
+    int idUser[200];
+    string tipe[200]; // “pesan” atau “batal”
+    int top;
+    Stack() { top = -1; }
+
+    // Tambah data ke stack
+    void push(string s, int id, string jenis) {
+        top++;
+        data[top] = s;
+        idUser[top] = id;
+        tipe[top] = jenis;
+    }
+        // ? Deklarasi fungsi undo (implementasi nanti di bawah)
+    void undo(struct Bioskop &b);
+
+    // ? Fungsi tampil (biar tidak error di menu 6)
     void tampil() {
+        if (top == -1) { 
+            cout << "Belum ada transaksi.\n"; 
+            return; 
+        }
         for (int i = top; i >= 0; i--)
             cout << "- " << data[i] << endl;
     }
-} histori;
+};
 
-/* ======================================================
-   BIOSKOP ? Mengelola keseluruhan sistem/array
-   ====================================================== */
+// ? Tambahkan ini di bawah Stack
+Stack histori;
+
+
+
+/* ============================================================
+   BIOSKOP – Data utama
+   ============================================================ */
 struct Bioskop {
     Film daftarFilm[3];
-    int jumlahFilm = 3;
-    int jumlahKursi = 10;
+    int jumlahFilm;
+    int jumlahKursi;
+
+    Bioskop() {
+        jumlahFilm = 3;
+        jumlahKursi = 10;
+    }
 
     void init() {
-        // Film 1
         daftarFilm[0].judul = "Avatar";
         daftarFilm[0].jumlahStudio = 2;
-        daftarFilm[0].daftarStudio = new Studio[2]{
-            {"Studio 1", "10:00 WIB", NULL},
-            {"Studio 2", "15:00 WIB", NULL}
-        };
+        daftarFilm[0].daftarStudio = new Studio[2];
+        daftarFilm[0].daftarStudio[0].namaStudio = "Studio 1";
+        daftarFilm[0].daftarStudio[0].jadwal = "10:00 WIB";
+        daftarFilm[0].daftarStudio[1].namaStudio = "Studio 2";
+        daftarFilm[0].daftarStudio[1].jadwal = "15:00 WIB";
 
-        // Film 2
         daftarFilm[1].judul = "Joker";
         daftarFilm[1].jumlahStudio = 1;
-        daftarFilm[1].daftarStudio = new Studio[1]{
-            {"Studio 3", "12:30 WIB", NULL}
-        };
+        daftarFilm[1].daftarStudio = new Studio[1];
+        daftarFilm[1].daftarStudio[0].namaStudio = "Studio 3";
+        daftarFilm[1].daftarStudio[0].jadwal = "12:30 WIB";
 
-        // Film 3
         daftarFilm[2].judul = "Frozen";
         daftarFilm[2].jumlahStudio = 1;
-        daftarFilm[2].daftarStudio = new Studio[1]{
-            {"Studio 2", "17:30 WIB", NULL}
-        };
+        daftarFilm[2].daftarStudio = new Studio[1];
+        daftarFilm[2].daftarStudio[0].namaStudio = "Studio 2";
+        daftarFilm[2].daftarStudio[0].jadwal = "17:30 WIB";
 
-        // Tambah kursi di tiap studio
         for (int i = 0; i < jumlahFilm; i++) {
             for (int s = 0; s < daftarFilm[i].jumlahStudio; s++) {
+                daftarFilm[i].daftarStudio[s].kursiRoot = NULL;
                 for (int k = 1; k <= jumlahKursi; k++)
                     daftarFilm[i].daftarStudio[s].kursiRoot =
                         tambahKursi(daftarFilm[i].daftarStudio[s].kursiRoot, k);
+                for (int z = 0; z < jumlahKursi; z++)
+                    daftarFilm[i].daftarStudio[s].idPemesanKursi[z] = -1;
             }
         }
     }
@@ -185,203 +244,239 @@ struct Bioskop {
             cout << s + 1 << ". " << daftarFilm[idxFilm].daftarStudio[s].namaStudio
                  << " - " << daftarFilm[idxFilm].daftarStudio[s].jadwal << endl;
     }
-
 } bioskop;
 
-/* ======================================================
+// ============================================================
+// IMPLEMENTASI FUNGSI UNDO (setelah struct Bioskop)
+// ============================================================
+void Stack::undo(Bioskop &b) {
+    int i, s, k; // Deklarasi variabel loop agar C++98 kompatibel
+
+    if (top == -1) {
+        cout << "Tidak ada aksi untuk di-undo.\n";
+        return;
+    }
+
+    cout << "Mengembalikan aksi: " << data[top] << endl;
+    int id = idUser[top];
+    string jenis = tipe[top];
+    User* u = cariUserByID(id);
+
+    if (u == NULL) {
+        cout << "User tidak ditemukan.\n";
+        top--;
+        return;
+    }
+
+    // === Undo Pemesanan ===
+    if (jenis == "pesan") {
+        for (i = 0; i < b.jumlahFilm; i++) {
+            if (b.daftarFilm[i].judul == u->film) {
+                for (s = 0; s < b.daftarFilm[i].jumlahStudio; s++) {
+                    if (b.daftarFilm[i].daftarStudio[s].namaStudio == u->studio) {
+                        for (k = 0; k < u->jumlahTiket; k++) {
+                            int noKursi = u->kursi[k];
+                            Kursi* kursi = cariKursi(b.daftarFilm[i].daftarStudio[s].kursiRoot, noKursi);
+                            if (kursi != NULL) kursi->terisi = false;
+                            b.daftarFilm[i].daftarStudio[s].idPemesanKursi[noKursi - 1] = -1;
+                        }
+                    }
+                }
+            }
+        }
+
+       u->status = "Menunggu";
+		u->film = "";
+		u->studio = "";
+		u->jadwal = "";
+		u->jumlahTiket = 0;
+		
+		// ?? Tambahkan kembali ke antrean agar bisa diproses lagi
+		antrean.enqueue(u->id);
+		
+		cout << "? Undo pemesanan berhasil. Kursi dikosongkan kembali & user dimasukkan lagi ke antrean.\n";
+
+    }
+
+    // === Undo Pembatalan ===
+    else if (jenis == "batal") {
+        for (i = 0; i < b.jumlahFilm; i++) {
+            if (b.daftarFilm[i].judul == u->film) {
+                for (s = 0; s < b.daftarFilm[i].jumlahStudio; s++) {
+                    if (b.daftarFilm[i].daftarStudio[s].namaStudio == u->studio) {
+                        for (k = 0; k < u->jumlahTiket; k++) {
+                            int noKursi = u->kursi[k];
+                            Kursi* kursi = cariKursi(b.daftarFilm[i].daftarStudio[s].kursiRoot, noKursi);
+                            if (kursi != NULL) kursi->terisi = true;
+                            b.daftarFilm[i].daftarStudio[s].idPemesanKursi[noKursi - 1] = u->id;
+                        }
+                    }
+                }
+            }
+        }
+
+        u->status = "Selesai";
+        cout << "? Undo pembatalan berhasil. Kursi dikembalikan seperti semula.\n";
+    }
+
+    top--;
+}
+
+
+/* ============================================================
    PROGRAM UTAMA
-   ====================================================== */
+   ============================================================ */
 int main() {
     bioskop.init();
-    int pilih;
+    int pilih, idCounter = 1001;
 
     do {
-        cout << "\n===== SISTEM BOOKING BIOSKOP =====\n";
+        system("cls");
+        cout << "===== SISTEM BOOKING BIOSKOP =====\n";
         cout << "1. Tambah User ke Antrean\n";
         cout << "2. Proses Pemesanan Tiket\n";
-        cout << "3. Batalkan Pemesanan User\n";
-        cout << "4. Lihat Status Kursi\n";
-        cout << "5. Lihat Riwayat Pemesanan\n";
-        cout << "6. Kosongkan Kursi Studio (Film Selesai)\n";
-        cout << "7. Keluar\n";
+        cout << "3. Batalkan Pemesanan (ID)\n";
+        cout << "4. Lihat Semua Data User\n";
+        cout << "5. Lihat Data Kursi (per Film/Studio)\n";
+        cout << "6. Lihat Riwayat Transaksi\n";
+        cout << "7. Undo Aksi Terakhir\n";
+        cout << "8. Keluar\n";
         cout << "Pilih menu: ";
         cin >> pilih;
         cin.ignore();
 
-        /* ======== 1. Tambah User (Linked List + Queue) ======== */
+        system("cls");
+
         if (pilih == 1) {
             string nama;
-            cout << "\nMasukkan nama user: ";
+            cout << "Masukkan nama user: ";
             getline(cin, nama);
-            tambahUser(nama);
-            antrean.enqueue(nama);
-            cout << "? " << nama << " ditambahkan ke antrean.\n";
+            tambahUser(nama, idCounter);
+            antrean.enqueue(idCounter);
+            cout << "? User " << nama << " ditambahkan (ID: " << idCounter << ")\n";
+            idCounter++;
             antrean.tampil();
-            system("pause");
-            system("cls");
         }
 
-        /* ======== 2. Pemesanan Tiket (Queue ? Film/Tree) ======== */
         else if (pilih == 2) {
-            if (antrean.kosong()) {
-                cout << "?? Antrean kosong.\n";
-                system("pause");
-                system("cls");
-                continue;
-            }
+            if (antrean.kosong()) { cout << "Antrean kosong.\n"; system("pause"); continue; }
+            int id = antrean.dequeue();
+            User* u = cariUserByID(id);
+            cout << "\nGiliran ID " << id << " (" << u->nama << ")\n";
 
-            string nama = antrean.dequeue();
-            cout << "\nGiliran: " << nama << endl;
             bioskop.tampilFilm();
-
-            int pf;
-            cout << "Pilih film: ";
-            cin >> pf;
-            if (pf < 1 || pf > bioskop.jumlahFilm) continue;
-            pf--;
-
+            int pf; cout << "Pilih film: "; cin >> pf; pf--;
             bioskop.tampilStudio(pf);
-            int ps;
-            cout << "Pilih studio: ";
-            cin >> ps;
-            if (ps < 1 || ps > bioskop.daftarFilm[pf].jumlahStudio) continue;
-            ps--;
+            int ps; cout << "Pilih studio: "; cin >> ps; ps--;
 
             Studio& studio = bioskop.daftarFilm[pf].daftarStudio[ps];
-            cout << "\nKursi tersedia di " << studio.namaStudio << " (" << studio.jadwal << "):\n";
-            tampilKursi(studio.kursiRoot);
+            tampilKursi(studio.kursiRoot, studio.idPemesanKursi);
 
-            int no;
-            cout << "\nPilih nomor kursi: ";
-            cin >> no;
-
-            Kursi* k = cariKursi(studio.kursiRoot, no);
-            if (k && !k->terisi) {
-                k->terisi = true;
-                User* u = cariUser(nama);
-                u->film = bioskop.daftarFilm[pf].judul;
-                u->studio = studio.namaStudio;
-                u->jadwal = studio.jadwal;
-                u->kursi = no;
-
-                stringstream ss;
-                ss << nama << " memesan '" << u->film << "' di " << u->studio
-                   << " (" << u->jadwal << ") kursi " << no;
-                histori.push(ss.str());
-                cout << "? Pemesanan berhasil!\n";
-            } else {
-                cout << "? Kursi tidak tersedia!\n";
+            int jumlahTiket; cout << "Masukkan jumlah tiket: "; cin >> jumlahTiket;
+            for (int i = 0; i < jumlahTiket; i++) {
+                int no; cout << "Pilih kursi ke-" << i + 1 << ": "; cin >> no;
+                Kursi* k = cariKursi(studio.kursiRoot, no);
+                if (k != NULL && !k->terisi) {
+                    k->terisi = true;
+                    studio.idPemesanKursi[no - 1] = u->id;
+                    u->kursi[i] = no;
+                } else { cout << "Kursi tidak tersedia!\n"; i--; }
             }
 
-            system("pause");
-            system("cls");
+            u->jumlahTiket = jumlahTiket;
+            u->film = bioskop.daftarFilm[pf].judul;
+            u->studio = studio.namaStudio;
+            u->jadwal = studio.jadwal;
+            u->status = "Selesai";
+
+            histori.push("[" + intToString(u->id) + "] " + u->nama + " memesan " + u->film, u->id, "pesan");
+            cout << "? Pemesanan berhasil!\n";
         }
 
-        /* ======== 3. Batalkan Pemesanan (Linked List + Tree + Stack) ======== */
-        else if (pilih == 3) {
-            string nama;
-            cout << "\nMasukkan nama user: ";
-            getline(cin, nama);
-
-            User* u = cariUser(nama);
-            if (!u || u->film == "") {
-                cout << "? Tidak ada pesanan aktif.\n";
-            } else {
-                // Kosongkan kursi yang dipesan
-                for (int i = 0; i < bioskop.jumlahFilm; i++) {
-                    if (bioskop.daftarFilm[i].judul == u->film) {
-                        for (int s = 0; s < bioskop.daftarFilm[i].jumlahStudio; s++) {
-                            if (bioskop.daftarFilm[i].daftarStudio[s].namaStudio == u->studio) {
-                                Kursi* k = cariKursi(bioskop.daftarFilm[i].daftarStudio[s].kursiRoot, u->kursi);
-                                if (k) k->terisi = false;
-                            }
-                        }
-                    }
-                }
-                stringstream ss;
-                ss << "? " << nama << " membatalkan '" << u->film
-                   << "' di " << u->studio << " (" << u->jadwal << ")";
-                histori.push(ss.str());
-
-                cout << "? Pesanan dibatalkan dan kursi dikosongkan.\n";
-                u->film = "";
-                u->studio = "";
-                u->jadwal = "";
-                u->kursi = -1;
-            }
-            system("pause");
-            system("cls");
-        }
-
-        /* ======== 4. Lihat Status Kursi (Tree) ======== */
-        else if (pilih == 4) {
-            bioskop.tampilFilm();
-            int pf;
-            cout << "Pilih film: ";
-            cin >> pf;
-            if (pf < 1 || pf > bioskop.jumlahFilm) continue;
-            pf--;
-
-            bioskop.tampilStudio(pf);
-            int ps;
-            cout << "Pilih studio: ";
-            cin >> ps;
-            if (ps < 1 || ps > bioskop.daftarFilm[pf].jumlahStudio) continue;
-            ps--;
-
-            tampilKursi(bioskop.daftarFilm[pf].daftarStudio[ps].kursiRoot);
-            system("pause");
-            system("cls");
-        }
-
-        /* ======== 5. Lihat Riwayat (Stack) ======== */
-        else if (pilih == 5) {
-            cout << "\n=== RIWAYAT ===\n";
-            if (histori.kosong()) cout << "Belum ada transaksi.\n";
-            else histori.tampil();
-            system("pause");
-            system("cls");
-        }
-
-        /* ======== 6. Kosongkan Studio (Tree) ======== */
-        else if (pilih == 6) {
-            bioskop.tampilFilm();
-            int pf;
-            cout << "Pilih film: ";
-            cin >> pf;
-            if (pf < 1 || pf > bioskop.jumlahFilm) continue;
-            pf--;
-
-            bioskop.tampilStudio(pf);
-            int ps;
-            cout << "Pilih studio: ";
-            cin >> ps;
-            if (ps < 1 || ps > bioskop.daftarFilm[pf].jumlahStudio) continue;
-            ps--;
-
-            kosongkanKursi(bioskop.daftarFilm[pf].daftarStudio[ps].kursiRoot);
-            stringstream ss;
-            ss << "?? Studio '" << bioskop.daftarFilm[pf].daftarStudio[ps].namaStudio
-               << "' untuk '" << bioskop.daftarFilm[pf].judul << "' dikosongkan.";
-            histori.push(ss.str());
-            cout << "? Studio dikosongkan!\n";
-            system("pause");
-            system("cls");
-        }
-
-        /* ======== 7. Keluar ======== */
-        else if (pilih == 7) {
-            cout << "Terima kasih telah menggunakan sistem ini! ??\n";
-        }
-        
-        else {
-        	cout<<"tidak valid ";
-        	break;
-    
+      else if (pilih == 3) {
+		    int id; 
+		    cout << "Masukkan ID user: "; 
+		    cin >> id;
+		
+		    User* u = cariUserByID(id);
+		    if (u == NULL) { 
+		        cout << "? User tidak ditemukan.\n"; 
+		    }
+		    else if (u->status == "Menunggu") {
+		        cout << "? Pemesanan belum diproses, tidak bisa dibatalkan.\n";
+		    }
+		    else if (u->status == "Batal") {
+		        cout << "? Pemesanan sudah dibatalkan sebelumnya.\n";
+		    }
+		    else if (u->status == "Selesai") {
+		        // ?? 1. Cari film dan studio user
+		        for (int i = 0; i < bioskop.jumlahFilm; i++) {
+		            if (bioskop.daftarFilm[i].judul == u->film) {
+		                for (int s = 0; s < bioskop.daftarFilm[i].jumlahStudio; s++) {
+		                    if (bioskop.daftarFilm[i].daftarStudio[s].namaStudio == u->studio) {
+		
+		                        // ?? 2. Kosongkan kursi yang dipesan user ini
+		                        for (int k = 0; k < u->jumlahTiket; k++) {
+		                            int noKursi = u->kursi[k];
+		                            Kursi* kursi = cariKursi(bioskop.daftarFilm[i].daftarStudio[s].kursiRoot, noKursi);
+		                            if (kursi != NULL) kursi->terisi = false;
+		                            bioskop.daftarFilm[i].daftarStudio[s].idPemesanKursi[noKursi - 1] = -1;
+		                        }
+		                    }
+		                }
+		            }
+		        }
+		
+		        // ?? 3. Ubah status user
+		        u->status = "Batal";
+		        histori.push("[" + intToString(u->id) + "] " + u->nama + " membatalkan " + u->film, u->id, "batal");
+		        cout << "? Pemesanan dibatalkan & kursi dikosongkan.\n";
+		    }
 		}
 
-    } while (pilih != 7);
 
+        else if (pilih == 4) {
+            cout << "\n=== SEMUA DATA USER ===\n";
+            User* u = headUser;
+            while (u != NULL) {
+                cout << "[" << u->id << "] " << u->nama
+                     << " | Film: " << u->film
+                     << " | Studio: " << u->studio
+                     << " | Tiket: " << u->jumlahTiket
+                     << " | Kursi: ";
+                for (int i = 0; i < u->jumlahTiket; i++)
+                    cout << u->kursi[i] << " ";
+                cout << "| Status: " << u->status << endl;
+                u = u->next;
+            }
+        }
+
+        else if (pilih == 5) {
+            bioskop.tampilFilm();
+            int pf; cout << "Pilih film: "; cin >> pf; pf--;
+            bioskop.tampilStudio(pf);
+            int ps; cout << "Pilih studio: "; cin >> ps; ps--;
+            cout << "\n=== STATUS KURSI ===\n";
+            tampilKursi(bioskop.daftarFilm[pf].daftarStudio[ps].kursiRoot,
+                        bioskop.daftarFilm[pf].daftarStudio[ps].idPemesanKursi);
+        }
+
+        else if (pilih == 6) {
+            cout << "\n=== RIWAYAT TRANSAKSI ===\n";
+            histori.tampil();
+        }
+
+       else if (pilih == 7) {
+		    histori.undo(bioskop);
+		}
+
+
+        if (pilih != 8) {
+            cout << endl; system("pause");
+        }
+
+    } while (pilih != 8);
+
+    cout << "Terima kasih!\n";
     return 0;
 }
-
