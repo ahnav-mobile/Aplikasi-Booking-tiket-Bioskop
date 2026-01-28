@@ -146,6 +146,22 @@ struct Queue {
             cout << "[" << data[i] << "] ";
         cout << endl;
     }
+    void enqueueFront(int id) {
+    if (count == 100) {
+        cout << "Antrean penuh!\n";
+        return;
+    }
+
+    // Geser semua data ke kanan
+    for (int i = rear; i >= front; i--) {
+        data[i + 1] = data[i];
+    }
+
+    data[front] = id;
+    rear++;
+    count++;
+}
+
 } antrean;
 
 /* ============================================================
@@ -292,7 +308,8 @@ void Stack::undo(Bioskop &b) {
 		u->jumlahTiket = 0;
 		
 		// ?? Tambahkan kembali ke antrean agar bisa diproses lagi
-		antrean.enqueue(u->id);
+		antrean.enqueueFront(u->id);
+
 		
 		cout << "? Undo pemesanan berhasil. Kursi dikosongkan kembali & user dimasukkan lagi ke antrean.\n";
 
