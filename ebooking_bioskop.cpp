@@ -127,11 +127,13 @@ struct Queue {
     int front, rear, count;
     Queue() { front = 0; rear = -1; count = 0; }
 
+//menambahkan ID user ke belakang antrean
     void enqueue(int id) {
         if (count == 100) { cout << "Antrean penuh!\n"; return; }
         rear++; data[rear] = id; count++;
     }
 
+//mengambil & menghapus ID paling depan
     int dequeue() {
         if (count == 0) return -1;
         int n = data[front]; front++; count--; return n;
@@ -139,6 +141,7 @@ struct Queue {
 
     bool kosong() { return count == 0; }
 
+//menampilkan isi antrean dari depan ke belakang
     void tampil() {
         cout << "Antrean ID: ";
         if (count == 0) cout << "(Kosong)";
@@ -146,6 +149,7 @@ struct Queue {
             cout << "[" << data[i] << "] ";
         cout << endl;
     }
+//memasukkan ID ke bagian DEPAN antrean
     void enqueueFront(int id) {
     if (count == 100) {
         cout << "Antrean penuh!\n";
