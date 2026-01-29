@@ -130,13 +130,17 @@ struct Queue {
 //menambahkan ID user ke belakang antrean
     void enqueue(int id) {
         if (count == 100) { cout << "Antrean penuh!\n"; return; }
-        rear++; data[rear] = id; count++;
+        rear++; //belakang
+		data[rear] = id; count++;
     }
 
 //mengambil & menghapus ID paling depan
     int dequeue() {
         if (count == 0) return -1;
-        int n = data[front]; front++; count--; return n;
+        int n = data[front]; 
+		front++; //maju
+		count--; //kurang
+		return n;
     }
 
     bool kosong() { return count == 0; }
