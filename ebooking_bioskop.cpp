@@ -175,12 +175,12 @@ struct Queue {
 /* ============================================================
    STACK – Riwayat transaksi (dengan fitur Undo)
    ============================================================ */
-   struct Bioskop; // Forward declaration agar dikenal di sini
+   struct Bioskop; 
 
 struct Stack {
     string data[200];
     int idUser[200];
-    string tipe[200]; // “pesan” atau “batal”
+    string tipe[200]; 
     int top;
     Stack() { top = -1; }
 
@@ -191,10 +191,10 @@ struct Stack {
         idUser[top] = id;
         tipe[top] = jenis;
     }
-        // ? Deklarasi fungsi undo (implementasi nanti di bawah)
+    
     void undo(struct Bioskop &b);
 
-    // ? Fungsi tampil (biar tidak error di menu 6)
+
     void tampil() {
         if (top == -1) { 
             cout << "Belum ada transaksi.\n"; 
@@ -204,8 +204,6 @@ struct Stack {
             cout << "- " << data[i] << endl;
     }
 };
-
-// ? Tambahkan ini di bawah Stack
 Stack histori;
 
 
@@ -315,7 +313,7 @@ void Stack::undo(Bioskop &b) {
 		u->jadwal = "";
 		u->jumlahTiket = 0;
 		
-		// ?? Tambahkan kembali ke antrean agar bisa diproses lagi
+	
 		antrean.enqueueFront(u->id);
 
 		
@@ -440,7 +438,7 @@ int main() {
 		                for (int s = 0; s < bioskop.daftarFilm[i].jumlahStudio; s++) {
 		                    if (bioskop.daftarFilm[i].daftarStudio[s].namaStudio == u->studio) {
 		
-		                        // ?? 2. Kosongkan kursi yang dipesan user ini
+		                        
 		                        for (int k = 0; k < u->jumlahTiket; k++) {
 		                            int noKursi = u->kursi[k];
 		                            Kursi* kursi = cariKursi(bioskop.daftarFilm[i].daftarStudio[s].kursiRoot, noKursi);
