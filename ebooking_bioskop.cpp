@@ -180,28 +180,32 @@ struct Queue {
 struct Stack {
     string data[200];
     int idUser[200];
-    string tipe[200]; 
+    string tipe[200]; // “pesan” atau “batal”
     int top;
-    Stack() { top = -1; }
 
-    // Tambah data ke stack
+    Stack() { top = 200; } // mulai dari "belakang + 1" (belum ada isi)
+
     void push(string s, int id, string jenis) {
-        top++;
+        if (top == 0) {
+            cout << "Stack penuh!\n";
+            return;
+        }
+        top--; // geser mundur
         data[top] = s;
         idUser[top] = id;
         tipe[top] = jenis;
     }
-    
+
     void undo(struct Bioskop &b);
 
-
     void tampil() {
-        if (top == -1) { 
-            cout << "Belum ada transaksi.\n"; 
-            return; 
+        if (top == 200) {
+            cout << "Belum ada transaksi.\n";
+            return;
         }
-        for (int i = top; i >= 0; i--)
+        for (int i = top; i < 200; i++) {
             cout << "- " << data[i] << endl;
+        }
     }
 };
 Stack histori;
@@ -274,7 +278,7 @@ struct Bioskop {
 void Stack::undo(Bioskop &b) {
     int i, s, k; // Deklarasi variabel loop agar C++98 kompatibel
 
-    if (top == -1) {
+    if (top == 200) {
         cout << "Tidak ada aksi untuk di-undo.\n";
         return;
     }
@@ -342,7 +346,7 @@ void Stack::undo(Bioskop &b) {
         cout << "? Undo pembatalan berhasil. Kursi dikembalikan seperti semula.\n";
     }
 
-    top--;
+    top++;
 }
 
 
